@@ -158,6 +158,42 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// ========================================
+// ROOT AND TEST ROUTES
+// ========================================
+
+// Root route for easy testing
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "KR Property Backend API is running! 🚀",
+    timestamp: new Date().toISOString(),
+    environment: NODE_ENV,
+    database: db ? "Connected" : "Not connected",
+    email: SENDGRID_API_KEY ? "Configured" : "Not configured",
+    endpoints: {
+      health: "/health",
+      test: "/api/test",
+      newsletter: "/api/newsletter",
+      contact: "/api/contact",
+      inflation: "/api/inflation",
+      dealSourcing: "/api/send-deal-lead",
+    },
+  });
+});
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "KR Property Backend is healthy! 🏥",
+    timestamp: new Date().toISOString(),
+    environment: NODE_ENV,
+    database: db ? "Connected" : "Not connected",
+    email: SENDGRID_API_KEY ? "Configured" : "Not configured",
+  });
+});
+
 // Create tables function
 async function createTables() {
   if (!sql) {
@@ -258,17 +294,6 @@ async function createTables() {
     return false;
   }
 }
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    database: db ? "connected" : "not connected",
-    email: SENDGRID_API_KEY ? "configured" : "not configured",
-    environment: NODE_ENV || "development",
-  });
-});
 
 // Test endpoint
 app.get("/api/test", async (req, res) => {
