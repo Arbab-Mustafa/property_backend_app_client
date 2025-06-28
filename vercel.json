@@ -1,13 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "framework": null,
-  "functions": {
-    "fixed-server.js": {
-      "runtime": "nodejs18.x"
+  "builds": [
+    {
+      "src": "fixed-server.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
@@ -17,8 +15,5 @@
       "src": "/(.*)",
       "dest": "/fixed-server.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
