@@ -1114,7 +1114,7 @@ app.put("/api/learning/progress/:userId/:moduleId", async (req, res) => {
       .returning();
 
     if (result.length === 0) {
-      // If no existing record, create one
+      // If no existing record, create one......
       const newResult = await db
         .insert(learningProgress)
         .values({
@@ -1152,9 +1152,9 @@ app.put("/api/learning/progress/:userId/:moduleId", async (req, res) => {
   }
 });
 
-// ========================================
+// ============================================
 // ACHIEVEMENT ROUTES
-// ========================================
+// ============================================
 
 // Get achievements for a user
 app.get("/api/learning/achievements/:userId", async (req, res) => {
