@@ -18,7 +18,6 @@ const sgMail = require("@sendgrid/mail");
 // Environment variables from .env file
 const DATABASE_URL = process.env.DATABASE_URL;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const BASEROW_API_TOKEN = process.env.BASEROW_API_TOKEN;
 const PORT = process.env.PORT || 8000;
 const NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -27,10 +26,6 @@ console.log("📊 DATABASE_URL:", DATABASE_URL ? "✅ Configured" : "❌ Missing
 console.log(
   "📧 SENDGRID_API_KEY:",
   SENDGRID_API_KEY ? "✅ Configured" : "❌ Missing"
-);
-console.log(
-  "📊 BASEROW_API_TOKEN:",
-  BASEROW_API_TOKEN ? "✅ Configured" : "❌ Missing"
 );
 console.log("🌍 NODE_ENV:", NODE_ENV);
 console.log("🔗 PORT:", PORT);
@@ -74,7 +69,6 @@ const contactSubmissions = pgTable("contact_submissions", {
   email: text("email").notNull(),
   phone: text("phone"),
   investmentAmount: text("investment_amount").notNull(),
-  interest: text("interest"),
   message: text("message").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -222,7 +216,6 @@ async function createTables() {
       email TEXT NOT NULL,
       phone TEXT,
       investment_amount TEXT NOT NULL,
-      interest TEXT,
       message TEXT NOT NULL,
       created_at TIMESTAMP DEFAULT NOW() NOT NULL
     )`;
@@ -425,8 +418,7 @@ app.post("/api/contact", async (req, res) => {
   try {
     console.log("📞 Contact form submission:", req.body);
 
-    const { name, email, phone, investmentAmount, interest, message } =
-      req.body;
+    const { name, email, phone, investmentAmount, message } = req.body;
 
     // Validation
     if (!name || !email || !investmentAmount || !message) {
@@ -452,7 +444,7 @@ app.post("/api/contact", async (req, res) => {
       });
     }
 
-    // Insert contact submission to Neon database
+    // Insert contact submission
     const result = await db
       .insert(contactSubmissions)
       .values({
@@ -460,7 +452,6 @@ app.post("/api/contact", async (req, res) => {
         email: email.trim(),
         phone: phone ? phone.trim() : null,
         investmentAmount: investmentAmount.trim(),
-        interest: interest ? interest.trim() : null,
         message: message.trim(),
       })
       .returning();
@@ -471,56 +462,6 @@ app.post("/api/contact", async (req, res) => {
 
     console.log("✅ Contact submission created with ID:", result[0].id);
 
-    // Submit to Baserow if API token is available
-    let baserowSubmitted = false;
-    let baserowError = null;
-
-    if (BASEROW_API_TOKEN) {
-      try {
-        console.log("📊 Submitting contact form to Baserow...");
-
-        const baserowData = {
-          Name: name.trim(),
-          Email: email.trim(),
-          Phone: phone ? phone.trim() : "",
-          "Investment Amount": investmentAmount.trim(),
-          Interest: interest ? interest.trim() : "",
-          Message: message.trim(),
-          "Submission Date": new Date().toISOString(),
-          Source: "Contact Form",
-        };
-
-        const baserowResponse = await fetch(
-          "https://api.baserow.io/api/database/rows/table/383510/?user_field_names=true",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Token ${BASEROW_API_TOKEN}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(baserowData),
-          }
-        );
-
-        if (baserowResponse.ok) {
-          const baserowResult = await baserowResponse.json();
-          console.log("✅ Contact form submitted to Baserow:", baserowResult);
-          baserowSubmitted = true;
-        } else {
-          const errorText = await baserowResponse.text();
-          console.error("❌ Baserow submission failed:", errorText);
-          baserowError = errorText;
-        }
-      } catch (baserowError) {
-        console.error("❌ Baserow submission error:", baserowError);
-        baserowError = baserowError.message;
-      }
-    } else {
-      console.log(
-        "⚠️ Baserow API token not found, skipping Baserow submission"
-      );
-    }
-
     res.status(201).json({
       success: true,
       message: "Contact form submitted successfully",
@@ -529,8 +470,6 @@ app.post("/api/contact", async (req, res) => {
         name: result[0].name,
         email: result[0].email,
         submittedAt: result[0].createdAt,
-        baserowSubmitted,
-        baserowError,
       },
     });
   } catch (error) {
