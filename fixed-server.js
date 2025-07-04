@@ -18,6 +18,7 @@ const sgMail = require("@sendgrid/mail");
 // Environment variables from .env file
 const DATABASE_URL = process.env.DATABASE_URL;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const BASEROW_API_TOKEN = process.env.BASEROW_API_TOKEN;
 const PORT = process.env.PORT || 8000;
 const NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -557,6 +558,52 @@ app.post("/api/inflation", async (req, res) => {
         console.error("⚠️ Failed to save calculation to database:", dbError);
         // Continue without failing the request
       }
+    }
+
+    // Save calculation to Baserow
+    if (BASEROW_API_TOKEN) {
+      try {
+        const baserowData = {
+          Name: name || "Anonymous",
+          Email: email || "",
+          "Investment Amount": initialAmount,
+          Interest: startYear,
+          Message: `Inflation calculation: £${initialAmount} from ${startYear}-${startMonth} -> £${finalAmount.toFixed(
+            2
+          )} today`,
+          "Submission Date": new Date().toISOString(),
+          "Source/Campaign": source || "Website",
+        };
+
+        console.log("📊 Submitting to Baserow:", baserowData);
+
+        const baserowResponse = await fetch(
+          "https://api.baserow.io/api/database/rows/table/595228/?user_field_names=true",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Token ${BASEROW_API_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(baserowData),
+          }
+        );
+
+        if (baserowResponse.ok) {
+          const baserowResult = await baserowResponse.json();
+          console.log("✅ Baserow submission successful:", baserowResult);
+        } else {
+          const errorText = await baserowResponse.text();
+          console.error("⚠️ Baserow submission failed:", errorText);
+        }
+      } catch (baserowError) {
+        console.error("⚠️ Failed to submit to Baserow:", baserowError);
+        // Continue without failing the request
+      }
+    } else {
+      console.log(
+        "⚠️ Baserow API token not configured, skipping Baserow submission"
+      );
     }
 
     res.json({
